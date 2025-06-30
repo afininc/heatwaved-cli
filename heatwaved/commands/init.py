@@ -2,7 +2,9 @@ import os
 import shutil
 from pathlib import Path
 
+import oci
 import typer
+from oci.exceptions import ConfigFileNotFound, ServiceError
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
@@ -142,4 +144,60 @@ def _handle_oci_configuration(config_manager: ConfigManager):
     # Save OCI configuration
     config_manager.save_oci_config(oci_config_text, oci_config)
     console.print("\n[green]✓ OCI configuration saved[/green]")
-    console.print("\n[bold green]✨ OCI configuration added successfully![/bold green]")
+
+    # Test OCI authentication
+    console.print("\n[bold]Testing OCI Authentication...[/bold]")
+    if _test_oci_auth(config_manager):
+        console.print(
+            "\n[bold green]✨ OCI configuration added and verified successfully![/bold green]"
+        )
+    else:
+        console.print(
+            "\n[yellow]⚠ OCI configuration saved but authentication test failed.[/yellow]"
+        )
+        console.print("[dim]Please check your configuration and try 'heatwaved test --oci'[/dim]")
+
+
+def _test_oci_auth(config_manager: ConfigManager) -> bool:
+    """Test OCI authentication and return True if successful."""
+    try:
+        oci_config = config_manager.load_oci_config()
+        if not oci_config or not oci_config.get('configured'):
+            return False
+
+        # Load OCI config
+        config_path = oci_config['config_path']
+        profile_name = oci_config.get('profile', 'DEFAULT')
+
+        config = oci.config.from_file(
+            file_location=config_path,
+            profile_name=profile_name
+        )
+
+        # Validate the config
+        oci.config.validate_config(config)
+
+        # Test authentication by getting user info
+        identity_client = oci.identity.IdentityClient(config)
+        user = identity_client.get_user(config["user"]).data
+
+        console.print(f"[green]✓ Authenticated as: {user.name}[/green]")
+        console.print(f"[dim]  User OCID: {user.id[:50]}...[/dim]")
+
+        # Get tenancy info
+        tenancy = identity_client.get_tenancy(config["tenancy"]).data
+        console.print(f"[dim]  Tenancy: {tenancy.name}[/dim]")
+        console.print(f"[dim]  Region: {config.get('region', 'Not specified')}[/dim]")
+
+        return True
+
+    except ServiceError as e:
+        console.print(f"[red]✗ OCI API error: {e.message}[/red]")
+    except ConfigFileNotFound:
+        console.print("[red]✗ Config file not found[/red]")
+    except KeyError as e:
+        console.print(f"[red]✗ Missing config parameter: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]✗ Authentication failed: {str(e)}[/red]")
+
+    return False
