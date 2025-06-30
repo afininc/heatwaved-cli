@@ -16,31 +16,14 @@ console = Console()
 
 
 @app.callback(invoke_without_command=True)
-def init(
-    ctx: typer.Context,
-    oci: bool = typer.Option(False, "--oci", help="Configure OCI authentication for Lakehouse POC"),
-):
-    """Initialize HeatWave configuration in the current directory."""
+def init(ctx: typer.Context):
+    """Initialize HeatWave configuration with both database and OCI setup."""
     if ctx.invoked_subcommand is not None:
         return
 
     config_manager = ConfigManager()
 
-    # If --oci flag is provided, only handle OCI configuration
-    if oci:
-        # Check if base configuration exists
-        if not config_manager.is_initialized():
-            console.print(
-                "[red]Error: HeatWave configuration not found. "
-                "Please run 'heatwaved init' first to set up database configuration.[/red]"
-            )
-            raise typer.Exit(1)
-
-        _handle_oci_configuration(config_manager)
-        return
-
-    # Normal initialization (database configuration)
-    console.print("\n[bold cyan]HeatWave CLI Configuration[/bold cyan]\n")
+    console.print("\n[bold cyan]HeatWave CLI Complete Setup[/bold cyan]\n")
 
     # Check if already initialized
     if config_manager.config_dir.exists() and not Confirm.ask(
@@ -52,7 +35,56 @@ def init(
     # Create configuration directory
     config_manager.ensure_config_dir()
 
-    # Database configuration
+    # Step 1: Database configuration
+    _setup_database(config_manager)
+
+    # Step 2: Ask if user wants to configure OCI
+    console.print("\n" + "="*50 + "\n")
+    if Confirm.ask(
+        "[bold]Do you want to configure OCI authentication for Lakehouse POC?[/bold]",
+        default=True
+    ):
+        _handle_oci_configuration(config_manager)
+    else:
+        console.print(
+            "[dim]Skipping OCI configuration. "
+            "You can set it up later with 'heatwaved init oci'[/dim]"
+        )
+
+    console.print("\n[bold green]✨ HeatWave CLI setup complete![/bold green]")
+    console.print("\n[dim]Configuration saved to .heatwaved/[/dim]")
+
+
+@app.command("db")
+def init_db():
+    """Initialize only database configuration."""
+    config_manager = ConfigManager()
+
+    # Create configuration directory if needed
+    config_manager.ensure_config_dir()
+
+    _setup_database(config_manager)
+    console.print("\n[dim]Configuration saved to .heatwaved/[/dim]")
+
+
+@app.command("oci")
+def init_oci():
+    """Initialize only OCI configuration."""
+    config_manager = ConfigManager()
+
+    # Check if base configuration exists
+    if not config_manager.is_initialized():
+        console.print(
+            "[red]Error: HeatWave configuration not found. "
+            "Please run 'heatwaved init db' first to set up database configuration.[/red]"
+        )
+        raise typer.Exit(1)
+
+    _handle_oci_configuration(config_manager)
+
+
+def _setup_database(config_manager: ConfigManager):
+    """Setup database configuration and test connection."""
     console.print("[bold]Database Configuration[/bold]")
 
     db_host = Prompt.ask("DB Host")
@@ -70,8 +102,18 @@ def init(
 
     config_manager.save_db_config(db_config)
     console.print("\n[green]✓ Database configuration saved[/green]")
-    console.print("\n[bold green]✨ HeatWave CLI initialized successfully![/bold green]")
-    console.print("\n[dim]Configuration saved to .heatwaved/[/dim]")
+
+    # Test database connection
+    console.print("\n[bold]Testing Database Connection...[/bold]")
+    if _test_db_connection(db_config):
+        console.print("\n[green]✓ Database connection successful![/green]")
+    else:
+        console.print(
+            "\n[yellow]⚠ Configuration saved but database connection failed.[/yellow]"
+        )
+        console.print(
+            "[dim]Please check your configuration and try 'heatwaved test --db'[/dim]"
+        )
 
 
 def _handle_oci_configuration(config_manager: ConfigManager):
@@ -199,5 +241,67 @@ def _test_oci_auth(config_manager: ConfigManager) -> bool:
         console.print(f"[red]✗ Missing config parameter: {e}[/red]")
     except Exception as e:
         console.print(f"[red]✗ Authentication failed: {str(e)}[/red]")
+
+    return False
+
+
+def _test_db_connection(db_config: dict) -> bool:
+    """Test database connection and return True if successful."""
+    try:
+        import mysql.connector
+
+        console.print(f"Connecting to {db_config['host']}:{db_config['port']}...")
+
+        connection = mysql.connector.connect(
+            host=db_config['host'],
+            port=db_config['port'],
+            user=db_config['username'],
+            password=db_config['password'],
+            connect_timeout=10  # 10 second timeout
+        )
+
+        if connection.is_connected():
+            cursor = connection.cursor()
+
+            # Get MySQL version
+            cursor.execute("SELECT VERSION()")
+            version = cursor.fetchone()[0]
+            console.print(f"[green]✓ Connected to MySQL {version}[/green]")
+
+            # Check if HeatWave is available
+            cursor.execute("SHOW VARIABLES LIKE 'rapid_%'")
+            heatwave_vars = cursor.fetchall()
+
+            if heatwave_vars:
+                console.print("[green]✓ HeatWave is available[/green]")
+                console.print(f"[dim]  Found {len(heatwave_vars)} HeatWave variables[/dim]")
+            else:
+                console.print(
+                    "[yellow]⚠ HeatWave not detected (no rapid_* variables found)[/yellow]"
+                )
+
+            # List available databases
+            cursor.execute("SHOW DATABASES")
+            databases = cursor.fetchall()
+            console.print(f"[dim]  Available databases: {len(databases)}[/dim]")
+
+            cursor.close()
+            connection.close()
+            return True
+
+    except ImportError:
+        console.print("[red]✗ mysql-connector-python not installed[/red]")
+    except mysql.connector.Error as e:
+        if "Access denied" in str(e):
+            console.print("[red]✗ Authentication failed: Invalid username or password[/red]")
+        elif "Can't connect" in str(e) or "not resolve" in str(e):
+            console.print(
+                f"[red]✗ Connection failed: Cannot reach "
+                f"{db_config['host']}:{db_config['port']}[/red]"
+            )
+        else:
+            console.print(f"[red]✗ Database error: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]✗ Unexpected error: {str(e)}[/red]")
 
     return False
