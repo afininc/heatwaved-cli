@@ -7,6 +7,8 @@ A command-line interface tool for Oracle MySQL HeatWave POC demonstrations. This
 - Secure database connection management with encrypted password storage
 - OCI (Oracle Cloud Infrastructure) authentication configuration
 - Automatic connection testing after setup
+- Schema (database) management commands
+- HeatWave GenAI permission setup automation
 - Designed specifically for HeatWave POC demonstrations
 - Local configuration storage with encryption
 
@@ -149,6 +151,22 @@ heatwaved schema drop my_database --force
 
 # Set default schema for future operations
 heatwaved schema use my_database
+```
+
+### HeatWave GenAI Setup
+
+```bash
+# Set up GenAI permissions for a schema
+heatwaved genai setup my_schema
+
+# Set up with different input/output schemas
+heatwaved genai setup main_schema --input-schema source_data --output-schema results
+
+# Preview SQL statements without executing
+heatwaved genai setup my_schema --show-only
+
+# Check current user's GenAI permissions
+heatwaved genai check
 ```
 
 ## Configuration Storage

@@ -44,6 +44,7 @@ uv add --dev [package-name]
    - `test`: Connection testing with automatic credential decryption
    - `config`: View current configuration
    - `schema`: Database schema management (create, list, drop, use)
+   - `genai`: HeatWave GenAI permission setup (setup, check)
 
 ### Key Design Decisions
 
