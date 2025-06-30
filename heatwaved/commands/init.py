@@ -100,6 +100,7 @@ def _setup_database(config_manager: ConfigManager):
         "password": db_password,
     }
 
+    # Save database configuration
     config_manager.save_db_config(db_config)
     console.print("\n[green]✓ Database configuration saved[/green]")
 

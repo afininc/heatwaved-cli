@@ -51,9 +51,12 @@ class ConfigManager:
 
     def save_db_config(self, config: dict[str, Any]):
         """Save database configuration with encrypted password."""
+        # Make a copy to avoid modifying the original config
+        config_to_save = config.copy()
+
         # Encrypt password
-        if "password" in config:
-            config["password"] = self.encrypt_value(config["password"])
+        if "password" in config_to_save:
+            config_to_save["password"] = self.encrypt_value(config_to_save["password"])
 
         # Load existing config if any
         existing_config = {}
@@ -61,7 +64,7 @@ class ConfigManager:
             existing_config = json.loads(self.env_file.read_text())
 
         # Update with new database config
-        existing_config["database"] = config
+        existing_config["database"] = config_to_save
 
         # Save to file
         self.env_file.write_text(json.dumps(existing_config, indent=2))
@@ -81,13 +84,16 @@ class ConfigManager:
 
     def save_oci_config(self, config_text: str, parsed_config: dict[str, str]):
         """Save OCI configuration."""
+        # Make a copy to avoid modifying the original
+        parsed_config_copy = parsed_config.copy()
+
         # Update config_text with the correct key_file path if it was changed
-        if "key_file" in parsed_config:
+        if "key_file" in parsed_config_copy:
             # Replace the key_file line in config_text with the updated path
             lines = config_text.split("\n")
             for i, line in enumerate(lines):
                 if line.strip().startswith("key_file="):
-                    lines[i] = f"key_file={parsed_config['key_file']}"
+                    lines[i] = f"key_file={parsed_config_copy['key_file']}"
                     break
             config_text = "\n".join(lines)
 
