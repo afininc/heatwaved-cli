@@ -129,6 +129,28 @@ heatwaved config show
 heatwaved config path
 ```
 
+### Manage Schemas
+
+```bash
+# Create a new schema
+heatwaved schema create my_database
+
+# List all schemas
+heatwaved schema list
+
+# List schemas matching pattern
+heatwaved schema list --pattern "test%"
+
+# Drop a schema (with confirmation)
+heatwaved schema drop my_database
+
+# Drop a schema without confirmation
+heatwaved schema drop my_database --force
+
+# Set default schema for future operations
+heatwaved schema use my_database
+```
+
 ## Configuration Storage
 
 All configuration is stored locally in the `.heatwaved/` directory:
