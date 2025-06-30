@@ -81,7 +81,17 @@ class ConfigManager:
 
     def save_oci_config(self, config_text: str, parsed_config: dict[str, str]):
         """Save OCI configuration."""
-        # Save the raw config file
+        # Update config_text with the correct key_file path if it was changed
+        if "key_file" in parsed_config:
+            # Replace the key_file line in config_text with the updated path
+            lines = config_text.split("\n")
+            for i, line in enumerate(lines):
+                if line.strip().startswith("key_file="):
+                    lines[i] = f"key_file={parsed_config['key_file']}"
+                    break
+            config_text = "\n".join(lines)
+
+        # Save the updated config file
         self.oci_config_file.write_text(config_text)
 
         # Update the main config file with OCI info
