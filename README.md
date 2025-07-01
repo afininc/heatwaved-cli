@@ -9,6 +9,7 @@ A command-line interface tool for Oracle MySQL HeatWave POC demonstrations. This
 - Automatic connection testing after setup
 - Schema (database) management commands
 - HeatWave GenAI permission setup automation
+- HeatWave Lakehouse Dynamic Group and Policy automation
 - Designed specifically for HeatWave POC demonstrations
 - Local configuration storage with encryption
 
@@ -167,6 +168,22 @@ heatwaved genai setup my_schema --show-only
 
 # Check current user's GenAI permissions
 heatwaved genai check
+```
+
+### HeatWave Lakehouse Setup
+
+```bash
+# Set up Dynamic Group and Policy for Object Storage access
+heatwaved lakehouse setup
+
+# Set up with specific compartment
+heatwaved lakehouse setup --compartment-id ocid1.compartment.oc1..xxxxx
+
+# Preview resources without creating
+heatwaved lakehouse setup --show-only
+
+# List buckets in a compartment
+heatwaved lakehouse list-buckets
 ```
 
 ## Configuration Storage

@@ -45,6 +45,7 @@ uv add --dev [package-name]
    - `config`: View current configuration
    - `schema`: Database schema management (create, list, drop, use)
    - `genai`: HeatWave GenAI permission setup (setup, check)
+   - `lakehouse`: HeatWave Lakehouse Dynamic Group/Policy management (setup, list-buckets)
 
 ### Key Design Decisions
 
