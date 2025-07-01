@@ -289,14 +289,20 @@ def list_models():
             return
 
         # Check which models are loaded
-        cursor.execute("SELECT model_handle FROM sys.ML_MODEL_LOADED")
-        loaded_models = {row[0] for row in cursor.fetchall()}
+        loaded_models = set()
+        try:
+            cursor.execute("SELECT model_handle FROM sys.ML_MODEL_LOADED")
+            loaded_models = {row[0] for row in cursor.fetchall()}
+        except Exception:
+            # ML_MODEL_LOADED table might not exist in some HeatWave versions
+            pass
 
         # Create table
         table = Table(title="Available Generation Models", show_header=True)
         table.add_column("Model ID", style="cyan")
         table.add_column("Provider", style="green")
-        table.add_column("Status", style="yellow")
+        if loaded_models:  # Only show status column if we could get loaded models
+            table.add_column("Status", style="yellow")
 
         for model_name, _ in models:
             if 'cohere.' in model_name or 'meta.' in model_name:
@@ -304,8 +310,11 @@ def list_models():
             else:
                 provider = "HeatWave In-Database"
 
-            status = "Loaded" if model_name in loaded_models else "Not Loaded"
-            table.add_row(model_name, provider, status)
+            if loaded_models:
+                status = "Loaded" if model_name in loaded_models else "Not Loaded"
+                table.add_row(model_name, provider, status)
+            else:
+                table.add_row(model_name, provider)
 
         console.print(table)
         console.print(f"\n[dim]Total models: {len(models)}[/dim]")
@@ -336,8 +345,13 @@ def _select_model(cursor) -> str:
             return None
 
         # Check which models are loaded
-        cursor.execute("SELECT model_handle FROM sys.ML_MODEL_LOADED")
-        loaded_models = {row[0] for row in cursor.fetchall()}
+        loaded_models = set()
+        try:
+            cursor.execute("SELECT model_handle FROM sys.ML_MODEL_LOADED")
+            loaded_models = {row[0] for row in cursor.fetchall()}
+        except Exception:
+            # ML_MODEL_LOADED table might not exist in some HeatWave versions
+            pass
 
         # Group models by provider
         heatwave_models = []
@@ -355,22 +369,28 @@ def _select_model(cursor) -> str:
         if heatwave_models:
             console.print("\n[yellow]HeatWave In-Database Models:[/yellow]")
             for i, model in enumerate(heatwave_models, 1):
-                if model in loaded_models:
-                    status = " [green](Loaded)[/green]"
+                if loaded_models:  # Only show status if we could get loaded models
+                    if model in loaded_models:
+                        status = " [green](Loaded)[/green]"
+                    else:
+                        status = " [red](Not Loaded)[/red]"
+                    console.print(f"{i}. [cyan]{model}[/cyan]{status}")
                 else:
-                    status = " [red](Not Loaded)[/red]"
-                console.print(f"{i}. [cyan]{model}[/cyan]{status}")
+                    console.print(f"{i}. [cyan]{model}[/cyan]")
                 all_models.append(model)
 
         if oci_models:
             console.print("\n[yellow]OCI Generative AI Models:[/yellow]")
             start_idx = len(heatwave_models) + 1
             for i, model in enumerate(oci_models, start_idx):
-                if model in loaded_models:
-                    status = " [green](Loaded)[/green]"
+                if loaded_models:  # Only show status if we could get loaded models
+                    if model in loaded_models:
+                        status = " [green](Loaded)[/green]"
+                    else:
+                        status = " [red](Not Loaded)[/red]"
+                    console.print(f"{i}. [cyan]{model}[/cyan]{status}")
                 else:
-                    status = " [red](Not Loaded)[/red]"
-                console.print(f"{i}. [cyan]{model}[/cyan]{status}")
+                    console.print(f"{i}. [cyan]{model}[/cyan]")
                 all_models.append(model)
 
         # Get user selection
@@ -383,7 +403,7 @@ def _select_model(cursor) -> str:
                 index = int(choice) - 1
                 if 0 <= index < len(all_models):
                     selected_model = all_models[index]
-                    if selected_model not in loaded_models:
+                    if loaded_models and selected_model not in loaded_models:
                         console.print(
                             f"\n[yellow]Warning: Model '{selected_model}' is not loaded.[/yellow]"
                         )
