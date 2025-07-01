@@ -10,6 +10,9 @@ A command-line interface tool for Oracle MySQL HeatWave POC demonstrations. This
 - Schema (database) management commands
 - HeatWave GenAI permission setup automation
 - HeatWave Lakehouse Dynamic Group and Policy automation
+- Text generation using HeatWave GenAI with ML_GENERATE
+- Batch text processing with ML_GENERATE_TABLE
+- Interactive mode for continuous text generation
 - Designed specifically for HeatWave POC demonstrations
 - Local configuration storage with encryption
 
@@ -184,6 +187,34 @@ heatwaved lakehouse setup --show-only
 
 # List buckets in a compartment
 heatwaved lakehouse list-buckets
+```
+
+### Text Generation with HeatWave GenAI
+
+```bash
+# Generate text using default query and model
+heatwaved generate text
+
+# Generate text with custom query
+heatwaved generate text "Explain quantum computing in simple terms"
+
+# Generate text with specific model and language
+heatwaved generate text --model mistral-7b-instruct-v1 --lang ko
+
+# Interactive mode for multiple queries
+heatwaved generate text --interactive
+
+# Show SQL query being executed
+heatwaved generate text --show-query
+
+# List available generation models
+heatwaved generate models
+
+# Batch generation from input table
+heatwaved generate batch input_table.queries output_table.responses
+
+# Batch generation with specific database
+heatwaved generate batch mydb.queries.prompt mydb.results.answer --database production
 ```
 
 ## Configuration Storage

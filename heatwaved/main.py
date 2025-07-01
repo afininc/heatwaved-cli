@@ -1,7 +1,7 @@
 
 import typer
 
-from heatwaved.commands import config, genai, init, lakehouse, schema, test
+from heatwaved.commands import config, genai, generate, init, lakehouse, schema, test
 
 app = typer.Typer(
     name="heatwaved",
@@ -15,6 +15,7 @@ app.add_typer(config.app, name="config", help="Manage HeatWave configuration")
 app.add_typer(schema.app, name="schema", help="Manage database schemas")
 app.add_typer(genai.app, name="genai", help="Manage HeatWave GenAI features")
 app.add_typer(lakehouse.app, name="lakehouse", help="Configure HeatWave Lakehouse access")
+app.add_typer(generate.app, name="generate", help="Generate text content using HeatWave GenAI")
 
 if __name__ == "__main__":
     app()
